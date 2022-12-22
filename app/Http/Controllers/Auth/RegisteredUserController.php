@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
+use Kreait\Firebase\Contract\Auth as FirebaseAuth;
 
 class RegisteredUserController extends Controller
 {
@@ -31,23 +32,26 @@ class RegisteredUserController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request)
+    public function store(Request $request, FirebaseAuth $auth)
     {
-        $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:'.User::class],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+        $validated = $request->validate([
+            'name' => ['required', 'string'],
+            'email' => ['required', 'string', 'email',],
+            'password' => ['required', 'confirmed', 'min:6'],
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+        try {
+            $auth->createUser([
+                'displayName' => $request->get('name'),
+                'email' => $request->get('email'),
+                'password' => $request->get('password'),
+            ]);
+        } catch(\Throwable $e) {
+            return back()->withErrors($e->getMessage());
+        }
+       
 
-        event(new Registered($user));
-
-        Auth::login($user);
+        Auth::attempt($validated);
 
         return redirect(RouteServiceProvider::HOME);
     }
