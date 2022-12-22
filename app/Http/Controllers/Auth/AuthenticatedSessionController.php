@@ -6,7 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
+use Kreait\Firebase\Contract\Auth as FirebaseAuth;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -26,13 +29,15 @@ class AuthenticatedSessionController extends Controller
      * @param  \App\Http\Requests\Auth\LoginRequest  $request
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function store(LoginRequest $request)
+    public function store(LoginRequest $request, FirebaseAuth $auth)
     {
+        $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required', 'min:6'],
+        ]);
+
         $request->authenticate();
-
-        $request->session()->regenerate();
-
-        return redirect()->intended(RouteServiceProvider::HOME);
+        return redirect()->intended('dashboard');
     }
 
     /**
